@@ -1,38 +1,46 @@
 //  /app/api/records/read/route.ts
-import { NextResponse } from "next/server";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { collectionName, db } from "@/app/utils/firebase";
+
+import { NextRequest, NextResponse } from "next/server";
 import { StudyData } from "@/app/utils/studyData";
+import { authenticateRequest } from "../../utils/authRequest";
+import { getFirestore } from "firebase-admin/firestore"; //クライアント SDK (`firebase/firestore`) から Admin SDK (`firebase-admin/firestore`) に移行、より強力な権限とセキュリティ機能を利用可能に
+import { firebaseAdmin } from "../../utils/firebaseAdmin";
+import { collectionName } from "@/app/utils/firebase";
 
 // **データ取得**
-export async function GET(request: Request) {
-  //exportで関数エクスポート、GETメソッドでデータ取得
+
+export async function GET(request: NextRequest) {
   try {
-    const email = new URL(request.url).searchParams.get("email"); //URLにパラメータとして付与されたemailを抽出、emailをキーにデータを取得
-    if (!email) {
-      //emailが存在しなければ、400エラーを返す
+    // トークンの検証を実施
+    const decodedToken = await authenticateRequest(request);
+    //デコードされたトークンをauthRequest.tsのauthenticateRequestから取得
+    if (!decodedToken) {
+      //デコードされたトークンが取得できなければ、エラー処理
       return NextResponse.json(
-        { success: false, error: "Email is required" },
-        { status: 400 }
+        { success: false, error: "認証できません: トークンが不正です" },
+        { status: 401 }
       );
     }
 
-    const studiesRef = collection(db, collectionName); //FirebaseSDKを利用してFirestoreDBデータを取得
-    const q = query(studiesRef, where("email", "==", email)); //emailがマッチするデータを取得
-    const snapshot = await getDocs(q);
+    console.log("decodedToken: ", decodedToken); //コンソールにトークン表示
+    const email = decodedToken.email; // トークンからemailを取得
+    const db = getFirestore(firebaseAdmin); // データベースのインスタンスをfirebaseAdmin権限で取得
 
-    const data: StudyData[] = snapshot.docs.map(
-      //取得したデータをmapメソッドで回し、StudyData型の配列として、dataに格納
-      (doc) => ({ id: doc.id, ...doc.data() } as StudyData)
-    );
+    // firestoreDBのコレクション、collectionNameよりデータ取得、emailでフィルタリング
+    const snapshot = await db
+      .collection(collectionName)
+      .where("email", "==", email)
+      .get();
 
-    console.log("GET:", data); // デバッグ用
-    //Firebaseからの応答は、successの値を持たないため、successとstatusをreturnするように追加
-    return NextResponse.json({ success: true, data }, { status: 200 });
+    const studies = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as StudyData[];
+
+    return NextResponse.json({ success: true, data: studies }, { status: 200 });
   } catch (error: unknown) {
     console.error("Error fetching studies:", error);
     return NextResponse.json(
-      //エラーの場合はsuccessをfalseとして、エラーメッセージ、status500をリターン
       {
         success: false,
         error: (error as Error).message || "Unknown error occurred",

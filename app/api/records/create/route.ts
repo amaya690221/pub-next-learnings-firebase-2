@@ -1,30 +1,43 @@
 //  /app/api/records/create/route.ts
-import { NextResponse } from "next/server";
-import { addDoc, collection } from "firebase/firestore";
-import { collectionName, db } from "@/app/utils/firebase";
-import { StudyData } from "@/app/utils/studyData";
+
+import { NextRequest, NextResponse } from "next/server";
+import { authenticateRequest } from "../../utils/authRequest";
+import { getFirestore } from "firebase-admin/firestore";
+import { firebaseAdmin } from "../../utils/firebaseAdmin";
+import { collectionName } from "@/app/utils/firebase";
 
 // **データ追加**
-export async function POST(request: Request) {
-  //POSTメソッドでデータ新規登録処理
-  const body: StudyData = await request.json(); //登録データをStudyData型のオブジェクトとしてJSON形式でrequestに渡す
 
-  if (!body.email || !body.title || body.time === undefined) {
-    //リクエスト内容（body）のいずれかが空の場合は、エラーコード400でリターン
-    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const studiesRef = collection(db, collectionName); //FirebaseSDKを利用して
-    const docRef = await addDoc(studiesRef, body); // FirestoreDBにリクエスト内容を新規登録
-    return NextResponse.json({ success: true }); //処理が終了すれば、successフラグをtrueでリターン
+    // トークンの検証を実施
+    const decodedToken = await authenticateRequest(request);
+    //デコードされたトークンをauthRequest.tsのauthenticateRequestから取得
+    if (!decodedToken) {
+      //デコードされたトークンが取得できなければ、エラー処理
+      return NextResponse.json(
+        { success: false, error: "認証できません: トークンが不正です" },
+        { status: 401 }
+      );
+    }
+
+    const data = await request.json(); //リクエストボディをJSON形式で取得
+    const email = decodedToken.email; //トークンからemailを取得
+    const db = getFirestore(firebaseAdmin); // データベースのインスタンスをfirebaseAdmin権限で取得
+
+    // データを追加
+    const docRef = await db.collection(collectionName).add({
+      ...data,
+      email,
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    console.error("Error fetching studies:", error);
+    console.error("Error creating study:", error);
     return NextResponse.json(
-      //エラーの場合はsuccessをfalseとして、エラーメッセージ、status500をリターン
       {
         success: false,
-        error: (error as Error).message || "Unknown error occurred", // error.messgaeはError型もしくは、unkownとして処理
+        error: (error as Error).message || "Unknown error occurred",
       },
       { status: 500 }
     );

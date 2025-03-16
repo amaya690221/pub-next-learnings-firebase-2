@@ -32,20 +32,25 @@ import { toast } from "sonner";
 import { User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "../utils/firebase";
+import { getToken } from "../utils/getToken";
 
 const Records = () => {
   const [email, setEmail] = useState("");
   const [learnings, setLearnings] = useState<StudyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState("");
   const router = useRouter();
 
   /** ユーザがセッション中か否かの判定処理 **/
   useEffect(() => {
-    const authUser = auth.onAuthStateChanged((user) => {
+    const authUser = auth.onAuthStateChanged(async (user) => {
       setUser(user);
       if (user) {
         setEmail(user.email as string);
+        //awaitを利用してトークンの取得を実施
+        const currentToken = await getToken();
+        setToken(currentToken);
       } else {
         router.push("/user/login"); //userがセッション中でなければ/user/loginに移動
       }
@@ -56,9 +61,18 @@ const Records = () => {
   }, []);
 
   /***Firestoreデータ取得***/
-  const fetchDb = async (email: string) => {
+  const fetchDb = async () => {
+    //引数は無しに
+    console.log("token:", token);
+    console.log("currentUser:", auth.currentUser);
     try {
-      const res = await fetch(`/api/records/read?email=${email}`);
+      const res = await fetch("/api/records/read", {
+        method: "GET",
+        headers: {
+          //ヘッダにトークン情報を付与
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const data = await res.json();
 
       if (res.ok && data.success) {
@@ -89,12 +103,15 @@ const Records = () => {
           time: study.time,
           email: email,
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, //ヘッダにトークン情報を付与
+        },
       });
       const data = await res.json();
       console.log(data);
       if (data.success) {
-        await fetchDb(email); // リロード
+        await fetchDb();
         toast.success("データ登録が完了しました");
       } else {
         throw new Error(data.error);
@@ -115,11 +132,14 @@ const Records = () => {
       const res = await fetch("/api/records/update", {
         method: "PUT",
         body: JSON.stringify(learnings),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, //ヘッダにトークン情報を付与
+        },
       });
       const data = await res.json();
       if (data.success) {
-        await fetchDb(email); // リロード
+        await fetchDb();
         toast.success("データ更新が完了しました");
       } else {
         throw new Error(data.error);
@@ -140,11 +160,14 @@ const Records = () => {
       const res = await fetch("/api/records/delete", {
         method: "DELETE",
         body: JSON.stringify({ id }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, //ヘッダにトークン情報を付与
+        },
       });
       const data = await res.json();
       if (data.success) {
-        await fetchDb(email); // リロード
+        await fetchDb(); // 引数は無しで
         toast.success("データを削除しました");
       } else {
         throw new Error(data.error);
@@ -161,7 +184,7 @@ const Records = () => {
   //Firestore確認
   useEffect(() => {
     if (email) {
-      fetchDb(email);
+      fetchDb(); // 引数は無しで
       console.log("useEffectFirestore:", email, user);
     }
   }, [user]); // userが更新された時のみ実行

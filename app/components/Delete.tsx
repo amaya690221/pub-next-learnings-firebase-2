@@ -13,17 +13,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react"; //Loader2追加
 
 type Props = {
   learning: StudyData;
-  loading: boolean;
-  deleteDb: (id: string) => Promise<void>;
+  loading: boolean; //追加
+  deleteDb: (id: string) => Promise<void>; //追加
 };
 
 const Delete = ({ learning, deleteDb, loading }: Props) => {
+  //受け取るprops、deleteDb、loadingの追加
   const [open, setOpen] = useState(false);
 
+  //追加
   //データ削除時の処理
   const handleDelete = async () => {
     await deleteDb(learning.id as string);
@@ -59,11 +61,11 @@ const Delete = ({ learning, deleteDb, loading }: Props) => {
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDelete}
-              disabled={loading}
+              onClick={handleDelete} //変更
+              disabled={loading} //追加
               className="text-white font-bold"
             >
-              {loading ? (
+              {loading ? ( //追加
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               削除

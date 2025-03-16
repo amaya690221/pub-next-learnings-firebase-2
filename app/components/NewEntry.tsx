@@ -14,14 +14,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2 } from "lucide-react"; //追加
+import { toast } from "sonner"; //追加
 
 type Props = {
   learnings: StudyData[];
-  loading: boolean;
-  updateDb: (data: StudyData) => Promise<void>;
-  entryDb: (data: StudyData) => Promise<void>;
+  loading: boolean; //追加
+  updateDb: (data: StudyData) => Promise<void>; //追加
+  entryDb: (data: StudyData) => Promise<void>; //追加
 };
 
 const NewEntry = ({ learnings, loading, updateDb, entryDb }: Props) => {
@@ -34,7 +34,7 @@ const NewEntry = ({ learnings, loading, updateDb, entryDb }: Props) => {
   });
   const [open, setOpen] = useState(false);
 
-  //input入力時の処理
+  //追加：input入力時の処理
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEntryLearning({
@@ -43,7 +43,7 @@ const NewEntry = ({ learnings, loading, updateDb, entryDb }: Props) => {
     });
   };
 
-  //登録ボタンクリック時の処理
+  //追加：登録ボタンクリック時の処理
   const handleEntry = async () => {
     if (entryLearning.title !== "" && entryLearning.time > 0) {
       if (learnings.some((l) => l.title === entryLearning.title)) {
@@ -91,7 +91,7 @@ const NewEntry = ({ learnings, loading, updateDb, entryDb }: Props) => {
                 id="title"
                 name="title"
                 value={entryLearning.title}
-                onChange={handleInputChange}
+                onChange={handleInputChange} //変更
                 className="col-span-3 focus-visible:ring-0"
               />
             </div>
@@ -104,7 +104,7 @@ const NewEntry = ({ learnings, loading, updateDb, entryDb }: Props) => {
                 name="time"
                 type="number"
                 value={entryLearning.time}
-                onChange={handleInputChange}
+                onChange={handleInputChange} //変更
                 className="col-span-3 focus-visible:ring-0"
               />
             </div>
@@ -118,11 +118,11 @@ const NewEntry = ({ learnings, loading, updateDb, entryDb }: Props) => {
               キャンセル
             </Button>
             <Button
-              onClick={handleEntry}
-              disabled={loading}
+              onClick={handleEntry} //変更
+              disabled={loading} //追加
               className="font-bold"
             >
-              {loading ? (
+              {loading ? ( //追加
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               登録

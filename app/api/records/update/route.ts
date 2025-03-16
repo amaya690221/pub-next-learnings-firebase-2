@@ -1,30 +1,65 @@
 //  /app/api/records/update/route.ts
-import { NextResponse } from "next/server";
-import { doc, updateDoc } from "firebase/firestore";
-import { collectionName, db } from "@/app/utils/firebase";
-import { StudyData } from "@/app/utils/studyData";
+
+import { NextRequest, NextResponse } from "next/server";
+import { authenticateRequest } from "../../utils/authRequest";
+import { getFirestore } from "firebase-admin/firestore";
+import { firebaseAdmin } from "../../utils/firebaseAdmin";
+import { collectionName } from "@/app/utils/firebase";
 
 // **データ更新**
-export async function PUT(request: Request) {
-  //PUTメソッドでデータ更新処理
-  const body: StudyData = await request.json(); //更新データをStudyData型のオブジェクトとしてJSON形式でrequestに渡す
 
-  if (!body.id || !body.email || !body.title || body.time === undefined) {
-    //リクエスト内容（body）のいずれかが空の場合は、エラーコード400でリターン
-    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
-  }
-
+export async function PUT(request: NextRequest) {
   try {
-    const docRef = doc(db, collectionName, body.id); //FirebaseSDKを利用して
-    await updateDoc(docRef, { title: body.title, time: body.time }); // FirestoreDBのリクエスト内容、更新処理
-    return NextResponse.json({ success: true }); //処理が終了すれば、successフラグをtrueでリターン
+    // トークンの検証を実施
+    const decodedToken = await authenticateRequest(request);
+    //デコードされたトークンをauthRequest.tsのauthenticateRequestから取得
+    if (!decodedToken) {
+      //デコードされたトークンが取得できなければ、エラー処理
+      return NextResponse.json(
+        { success: false, error: "認証できません: トークンが不正です" },
+        { status: 401 }
+      );
+    }
+
+    const data = await request.json(); //リクエストボディをJSON形式で取得
+    const { id, ...updateData } = data; //リクエストボディからidと更新データを取得
+    const email = decodedToken.email; //トークンからemailを取得
+    const db = getFirestore(firebaseAdmin); // データベースのインスタンスをfirebaseAdmin権限で取得
+
+    // ドキュメントの存在確認と所有者チェック
+    const docRef = db.collection(collectionName).doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      //ドキュメントが存在しない場合はエラー
+      return NextResponse.json(
+        { success: false, error: "Document not found" },
+        { status: 404 }
+      );
+    }
+
+    const docData = doc.data();
+    if (docData?.email !== email) {
+      //emailが一致しない場合はエラー
+      return NextResponse.json(
+        { success: false, error: "Unauthorized access" },
+        { status: 403 }
+      );
+    }
+
+    // データを更新
+    await docRef.update({
+      ...updateData,
+      updatedAt: new Date(),
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    console.error("Error fetching studies:", error);
+    console.error("Error updating study:", error);
     return NextResponse.json(
-      //エラーの場合はsuccessをfalseとして、エラーメッセージ、status500をリターン
       {
         success: false,
-        error: (error as Error).message || "Unknown error occurred", // error.messgaeはError型もしくは、unkownとして処理
+        error: (error as Error).message || "Unknown error occurred",
       },
       { status: 500 }
     );

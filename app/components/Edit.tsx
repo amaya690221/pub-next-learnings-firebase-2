@@ -15,19 +15,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { EditIcon, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { EditIcon, Loader2 } from "lucide-react"; //Loader2追加
+import { toast } from "sonner"; //追加
 
 type Props = {
   learning: StudyData;
-  loading: boolean;
-  updateDb: (data: StudyData) => Promise<void>;
+  loading: boolean; //追加
+  updateDb: (data: StudyData) => Promise<void>; //追加
 };
 
 const Edit = ({ learning, updateDb, loading }: Props) => {
+  //updateDb, loading追加
   const [updateLearning, setUpdateLearning] = useState(learning);
   const [open, setOpen] = useState(false);
 
+  //追加
   //input変更時の処理
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -37,6 +39,7 @@ const Edit = ({ learning, updateDb, loading }: Props) => {
     });
   };
 
+  //追加
   //更新ボタンクリック時の処理
   const handleUpdate = async () => {
     if (updateLearning.title !== "" && updateLearning.time > 0) {
@@ -75,7 +78,7 @@ const Edit = ({ learning, updateDb, loading }: Props) => {
                 id="title"
                 name="title"
                 value={updateLearning.title}
-                onChange={handleInputChange}
+                onChange={handleInputChange} //変更
                 className="col-span-3 focus-visible:ring-0"
               />
             </div>
@@ -88,7 +91,7 @@ const Edit = ({ learning, updateDb, loading }: Props) => {
                 name="time"
                 type="number"
                 value={updateLearning.time}
-                onChange={handleInputChange}
+                onChange={handleInputChange} //変更
                 className="col-span-3 focus-visible:ring-0"
               />
             </div>
@@ -102,11 +105,11 @@ const Edit = ({ learning, updateDb, loading }: Props) => {
               キャンセル
             </Button>
             <Button
-              onClick={handleUpdate}
-              disabled={loading}
+              onClick={handleUpdate} //変更
+              disabled={loading} //追加
               className="font-bold"
             >
-              {loading ? ( // ローディング中はアイコンを表示
+              {loading ? ( //追加
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               データを更新
